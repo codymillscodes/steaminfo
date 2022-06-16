@@ -1,0 +1,4 @@
+aiohttp>=3.7.3
+requests>=2.25.1
+aiounittest>=1.4.0
+fake_useragent==0.1.11
