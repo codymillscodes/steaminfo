@@ -62,7 +62,7 @@ def clean_json(j, id):
              "screenshots", "recommendations", "achievements", "release_date",
              "support_info", "background", "background_raw",
              "content_descriptors", "movies", "demos", "categories",
-             "legal_notice", "reviews", "drm_notice", "mac_requirements")
+             "legal_notice", "reviews", "drm_notice", "mac_requirements", "dlc")
 
     j[id].pop("success", None)
     j[id]['data']['platforms'].pop('mac', None)
@@ -87,7 +87,7 @@ def clean_name(name):
     return parsed_name
 
 
-def howlong(name, playtime=0, fail_file='failures.txt'):
+def howlong(name, fail_file='failures.txt'):
     parsed_name = clean_name(name)
     print("Parsed:" + parsed_name)
 
@@ -108,7 +108,6 @@ def howlong(name, playtime=0, fail_file='failures.txt'):
                 break
 
     hltb_dict = {
-        "playtime": playtime,
         "gameplay_main": "-1",
         "gameplay_main_extra": "-1",
         "gameplay_completionist": "-1"
@@ -124,12 +123,34 @@ def howlong(name, playtime=0, fail_file='failures.txt'):
         print('howlong: ' + results[0].game_name)
         return hltb_dict
     else:
-        print(f"nothin from hltb\n")
+        print(f"nothin from hltb")
         return hltb_dict
 
 
-def get_all_game_details(id='',
-                         key='',
+def get_app_json(appid):
+    print(f"\nGetting json for {appid}")
+    r = requests.get(
+        f'https://store.steampowered.com/api/appdetails/?appids={appid}')
+    if (r.status_code == requests.codes.ok):
+        return r.json()
+    else:
+        print(f"Status: {r.status_code}")
+        return 404
+
+
+def get_name(appid, json=''):
+    if json != '':
+        return json[f'{appid}']['data']['name']
+    else:
+        game = get_app_json(appid)
+        if game == 404:
+            return 0
+        else:
+            name = game[f'{appid}']['data']['name']
+            return name
+
+def get_all_game_details(id,
+                         key,
                          file='gamedetails.json',
                          rate=3,
                          parsed=False,
@@ -155,9 +176,10 @@ def get_all_game_details(id='',
             if parsed == True:
                 clean_json(game_json, appid)
 
-            hltb_result = howlong(game_name, playtime, fail_file)
+            hltb_result = howlong(game_name, fail_file)
+            game_json[appid]['data']['playtime'] = playtime
             if hltb_result != None:
-                game_json.update(hltb_result)
+                game_json[appid]['data']['howlongtobeat'] = hltb_result
 
             game_dict[loop] = game_json
             print(loop)
@@ -176,24 +198,3 @@ def get_all_game_details(id='',
         for fail in failed:
             f.write(fail + ', ')
 
-def get_app_json(appid):
-    print(f"\nGetting json for {appid}")
-    r = requests.get(
-        f'https://store.steampowered.com/api/appdetails/?appids={appid}')
-    if (r.status_code == requests.codes.ok):
-        return r.json()
-    else:
-        print(f"Status: {r.status_code}")
-        return 404
-
-
-def get_name(appid, json=''):
-    if json != '':
-        return json[f'{appid}']['data']['name']
-    else:
-        game = get_app_json(appid)
-        if game == 404:
-            return 0
-        else:
-            name = game[f'{appid}']['data']['name']
-            return name
